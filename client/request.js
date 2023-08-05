@@ -126,7 +126,9 @@ render.on('commitNavigation', function (response) {
             // console.dir(layers,{
             //     depth: null
             // });
-            console.log(layers)
+            // 根据分层树进行生成绘制步骤并复合图层
+            const paintSteps = compositeLayers(layers)
+            console.log(paintSteps.flat().join('\r\n'));
             //触发DOMContentLoaded事件
             main.emit('DOMContentLoaded');
             //9.HTML解析完毕和加载子资源页面加载完成后会通知主进程页面加载完成
@@ -229,6 +231,25 @@ function createNewLayer(element, layers) {
     })
     return created
 }
+
+function compositeLayers(layers) {
+    // 合成线程会把分好的图块发给栅格化线程池，栅格化线程会把图片（title）转化为位图
+    return layers.map( layout => paint(layout) )
+}
+
+function paint(element, paintSteps = []) {
+    const { background = 'black', color = 'black', top = 0, left = 0, width = 100, height = 0 } = element.layout;
+    if (element.type === 'text') {
+        paintSteps.push(`ctx.font = '20px Impact;'`);
+        paintSteps.push(`ctx.strokeStyle = '${color}';`);
+        paintSteps.push(`ctx.strokeText("${element.text.replace(/(^\s+|\s+$)/g, '')}", ${left},${top + 20});`);
+    } else {
+        paintSteps.push(`ctx.fillStyle="${background}";`);
+    paintSteps.push(`ctx.fillRect(${left},${top}, ${parseInt(width)}, ${parseInt(height)});`);
+    }
+    element.children.forEach(child => paint(child, paintSteps));
+    return paintSteps;
+    }
     
 //1.主进程接收用户输入的URL
 main.emit('request', { host, port, path: '/index.html' });
