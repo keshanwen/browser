@@ -10,6 +10,8 @@ const gpu = require('./gpu.js');
 const { title, emit } = require('process');
 const host = 'localhost';
 const port = 80;
+const loadingLinks = {}
+const loadingScripts = {}
 
 Array.prototype.top = function () {
    return this[this.length - 1];
@@ -99,6 +101,39 @@ render.on('commitNavigation', function (response) {
                         const cssAST = css.parse(styleToken.children[0].text)
                         cssRules.push(...cssAST.stylesheet.rules)
                         break;
+                    case 'link':
+                        const linkToken = tokenStack[tokenStack.length - 1];
+                        const href = linkToken.attributes.href;
+                        const options = { host, port, path: href }
+                        const promise = network.fetchResource(options).then(({ body }) => {
+                            delete loadingLinks[href];
+                            const cssAST = css.parse(body);
+                            cssRules.push(...cssAST.stylesheet.rules);
+                        });
+                        loadingLinks[href] = promise;
+                        break;
+                    case 'script':
+                        const scriptToken = tokenStack[tokenStack.length - 1];
+                        const src = scriptToken.attributes.src;
+                        if (src) {
+                            const options = { host, port, path: src };
+                            const promise = network.fetchResource(options).then(({ body }) => {
+                                delete loadingScripts[src];
+                                return Promise.all([...Object.values(loadingLinks), Object.values(loadingScripts)]).then(() => {
+                                    eval(body);
+                                });
+                            });
+                            loadingScripts[src] = promise;
+                        } else {
+                            const script = scriptToken.children[0].text;
+                            const ts = Date.now() + '';
+                            const promise = Promise.all([...Object.values(loadingLinks), ...Object.values(loadingScripts)]).then(() => {
+                                delete loadingScripts[ts];
+                                eval(script);
+                            });
+                            loadingScripts[ts] = promise;
+                        }
+                        break;           
                     default:
                         break;    
                 }
@@ -114,34 +149,36 @@ render.on('commitNavigation', function (response) {
             parser.write(buffer.toString())
         })
         response.on('end', () => {
-            //7.HTML接收接受完毕后通知主进程确认导航
-            main.emit('confirmNavigation');
-            // 通过 stylesheet 计算出DOM 节点的样式
-            recalculateStyle(cssRules, document)
-            // 根据DOM 树创建布局树，就是复制DOM结构并过滤掉不显示的元素
-            const html = document.children[0]
-            const body = html.children[1]
-            const layoutTree = createLayout(body)
-            // 计算各个元素的布局信息
-            updateLayoutTree(layoutTree)
-            // 根据布局树生成分层树
-            const layers = [layoutTree];
-            createLayerTree(layoutTree, layers);
-            // console.dir(layers,{
-            //     depth: null
-            // });
-            // 根据分层树进行生成绘制步骤并复合图层
-            const paintSteps = compositeLayers(layers)
-            // console.log(paintSteps.flat().join('\r\n'));
-            // 把绘制步骤交给渲染进程中的合成线程进行合成
-            // 合成线程会把图层划分为图块(tile)
-            const tiles = splitTiles(paintSteps);
-            // 合成线程会把分好的图块发给栅格化线程池
-            raster(tiles);
-            //触发DOMContentLoaded事件
-            main.emit('DOMContentLoaded');
-            //9.HTML解析完毕和加载子资源页面加载完成后会通知主进程页面加载完成
-            main.emit('Load');
+            Promise.all(Object.values(loadingScripts)).then(() => {
+                //7.HTML接收接受完毕后通知主进程确认导航
+                main.emit('confirmNavigation');
+                // 通过 stylesheet 计算出DOM 节点的样式
+                recalculateStyle(cssRules, document)
+                // 根据DOM 树创建布局树，就是复制DOM结构并过滤掉不显示的元素
+                const html = document.children[0]
+                const body = html.children[1]
+                const layoutTree = createLayout(body)
+                // 计算各个元素的布局信息
+                updateLayoutTree(layoutTree)
+                // 根据布局树生成分层树
+                const layers = [layoutTree];
+                createLayerTree(layoutTree, layers);
+                // console.dir(layers,{
+                //     depth: null
+                // });
+                // 根据分层树进行生成绘制步骤并复合图层
+                const paintSteps = compositeLayers(layers)
+                // console.log(paintSteps.flat().join('\r\n'));
+                // 把绘制步骤交给渲染进程中的合成线程进行合成
+                // 合成线程会把图层划分为图块(tile)
+                const tiles = splitTiles(paintSteps);
+                // 合成线程会把分好的图块发给栅格化线程池
+                raster(tiles);
+                //触发DOMContentLoaded事件
+                main.emit('DOMContentLoaded');
+                //9.HTML解析完毕和加载子资源页面加载完成后会通知主进程页面加载完成
+                main.emit('Load');
+            })
         })
     }
 
@@ -277,7 +314,7 @@ function rasterThread(tile) {
 } 
     
 //1.主进程接收用户输入的URL
-main.emit('request', { host, port, path: '/index.html' });
+main.emit('request', { host, port, path: '/load.html' });
 
 gpu.on('raster', (tile) => {
     //13.最终生成的位图就保存在了GPU内存中
@@ -285,9 +322,11 @@ gpu.on('raster', (tile) => {
     gpu.bitMaps.push(bitMap);
 });
 
+
 main.on('drawQuad', function () {
     //14.浏览器主进程然后会从GPU内存中取出位图显示到页面上
     let drawSteps = gpu.bitMaps.flat();  
+    console.log(drawSteps, 'drawStep')
     const canvas = createCanvas(150, 250);
     const ctx = canvas.getContext('2d');
     eval(drawSteps.join('\r\n'));
