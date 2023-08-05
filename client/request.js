@@ -1,5 +1,6 @@
 const http = require('http');
 const htmlparser2 = require('htmlparser2');
+const css = require('css')
 const main = require('./main.js');
 const network = require('./network.js');
 const render = require('./render.js');
@@ -53,6 +54,7 @@ render.on('commitNavigation', function (response) {
             attributes: {},
             children: []
         }
+        const cssRules = []
         const tokenStack = [document]
         const parser = new htmlparser2.Parser({
             onopentag(name, attributes = {}) {
@@ -86,7 +88,16 @@ render.on('commitNavigation', function (response) {
                 然后在构建DOM树，重新计算样式，构建布局树，绘制页面
             
             */
-            onclosetag() {
+            onclosetag(tagName) {
+                switch(tagName) {
+                    case 'style':
+                        const styleToken = tokenStack.top()
+                        const cssAST = css.parse(styleToken.children[0].text)
+                        cssRules.push(...cssAST.stylesheet.rules)
+                        break;
+                    default:
+                        break;    
+                }
                 tokenStack.pop()
             }
         })
@@ -99,9 +110,10 @@ render.on('commitNavigation', function (response) {
             parser.write(buffer.toString())
         })
         response.on('end', () => {
-           /*  console.dir(document, {
-                depth: null
-            }) */
+            /*     console.dir(cssRules, {
+              depth: null
+            })  */
+          
             //7.HTML接收接受完毕后通知主进程确认导航
             main.emit('confirmNavigation');
             //触发DOMContentLoaded事件
@@ -114,4 +126,4 @@ render.on('commitNavigation', function (response) {
 })
 
 //1.主进程接收用户输入的URL
-main.emit('request', { host, port, path: '/html.html' });
+main.emit('request', { host, port, path: '/index.html' });
