@@ -118,6 +118,8 @@ render.on('commitNavigation', function (response) {
             const html = document.children[0]
             const body = html.children[1]
             const layoutTree = createLayout(body)
+            // 计算各个元素的布局信息
+            updateLayoutTree(layoutTree)
             console.dir(layoutTree, {
                 depth: null
             })
@@ -178,6 +180,23 @@ function isShow(element) {
         }
     })
     return isShow
+}
+
+function updateLayoutTree(element, top = 0, parentTop = 0) {
+    const computedStyle = element.computedStyle
+    element.layout = {
+        top: top + parentTop,
+        left: 0,
+        width: computedStyle.width,
+        height: computedStyle.height,
+        background: computedStyle.background,
+        color: computedStyle.color
+    }
+    let childTop = 0;
+    element.children.forEach( child => {
+        updateLayoutTree(child, childTop, element.layout.top)
+        childTop += parseInt(child.computedStyle.height || 0)
+    })
 }
     
 //1.主进程接收用户输入的URL
