@@ -120,9 +120,13 @@ render.on('commitNavigation', function (response) {
             const layoutTree = createLayout(body)
             // 计算各个元素的布局信息
             updateLayoutTree(layoutTree)
-            console.dir(layoutTree, {
-                depth: null
-            })
+            // 根据布局树生成分层树
+            const layers = [layoutTree];
+            createLayerTree(layoutTree, layers);
+            // console.dir(layers,{
+            //     depth: null
+            // });
+            console.log(layers)
             //触发DOMContentLoaded事件
             main.emit('DOMContentLoaded');
             //9.HTML解析完毕和加载子资源页面加载完成后会通知主进程页面加载完成
@@ -197,6 +201,33 @@ function updateLayoutTree(element, top = 0, parentTop = 0) {
         updateLayoutTree(child, childTop, element.layout.top)
         childTop += parseInt(child.computedStyle.height || 0)
     })
+}
+
+function createLayerTree(element, layers) {
+    element.children = element.children.filter( (child) => {
+        return createNewLayer(child, layers)
+    })
+    element.children.forEach( child => createLayerTree(child,layers))
+    return layers
+}
+
+function createNewLayer(element, layers) {
+    let created = true
+    const attributes = element.attributes
+    Object.entries(attributes).forEach( ([key, value]) => {
+        if (key === 'style') {
+            const attributes = value.split(';')
+            attributes.forEach( (attribute) => {
+                const [property, value] = attribute.split(/:\s*/)
+                if (property === 'position' && value === 'absolute') {
+                    updateLayoutTree(element) // 对单独的层重新计算位置
+                    layers.push(element)
+                    created = false
+                }
+            })
+        }
+    })
+    return created
 }
     
 //1.主进程接收用户输入的URL
