@@ -114,7 +114,11 @@ render.on('commitNavigation', function (response) {
             main.emit('confirmNavigation');
             // 通过 stylesheet 计算出DOM 节点的样式
             recalculateStyle(cssRules, document)
-            console.dir(document, {
+            // 根据DOM 树创建布局树，就是复制DOM结构并过滤掉不显示的元素
+            const html = document.children[0]
+            const body = html.children[1]
+            const layoutTree = createLayout(body)
+            console.dir(layoutTree, {
                 depth: null
             })
             //触发DOMContentLoaded事件
@@ -148,7 +152,33 @@ function recalculateStyle(cssRules, element, parentComputedStyle = {}) {
             }
         });
     element.children.forEach(child => recalculateStyle(cssRules, child,element.computedStyle));
-}    
+}   
+
+function createLayout(element) {
+    element.children = element.children.filter(isShow)
+    element.children.forEach( child => createLayout(child) )
+    return element
+}
+
+function isShow(element) {
+    let isShow = true
+    if (element.tagName === 'head' || element.tagName === 'script') {
+        isShow = false
+    }
+    const attributes = element.attributes
+    Object.entries(attributes).forEach( ([key, value]) => {
+        if (key === 'style') {
+            const attributes = value.split(';')
+            attributes.forEach( (attribute) => {
+                const [property, value] = attribute.split(/:\s*/)
+                if (property === 'display' && value === 'none') {
+                    isShow = false           
+                }
+            })
+        }
+    })
+    return isShow
+}
     
 //1.主进程接收用户输入的URL
 main.emit('request', { host, port, path: '/index.html' });
