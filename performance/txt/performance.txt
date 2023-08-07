@@ -1,0 +1,43 @@
+核心流程
+
+导航阶段 ------>
+
+beforeunload	事件触发于 window、document 和它们的资源即将卸载时
+navigationstart	相同的浏览环境下卸载前一个文档结束之时
+pagehide	当浏览器在显示与会话历史记录不同的页面的过程中隐藏当前页面时, pagehide(页面隐藏)事件会被发送到一个Window
+visibilitychange	当浏览器的某个标签页切换到后台，或从后台切换到前台时就会触发该消息
+unload	当文档或一个子资源正在被卸载时, 触发 unload事件
+unloadEventEnd	事件处理程序结束之时
+send request	发送请求
+receive data	接收响应
+commitNavigationEnd	提交本次导航结束
+domLoading	解析器开始工作时
+
+
+解析HTML阶段 ----->
+
+receive data	接收数据
+complete loading	完成加载
+parseHTML	解析HTML
+recalculateStyle	重新计算样式
+layout	布局
+update layer tree	更新图层树
+paint	绘制
+raster	GPU光栅化
+compositor	复合图层
+display	显示
+dominteractive	主文档的解析器结束工作时
+readystatechange	interactive（可交互）
+domContentLoadedEventStart	所有的需要被运行的脚本已经被解析之时
+DOMContentLoaded	当初始的 HTML 文档被完全加载和解析完成之后，DOMContentLoaded 事件被触发，而无需等待样式表、图像和子框架的完全加载
+domContentLoadedEventEnd	这个时刻为所有需要尽早执行的脚本不管是否按顺序，都已经执行完毕
+domComplete	主文档的解析器结束工作
+readystatechange	complete（完成）
+loadEventStart	load事件被现在的文档触发之时
+load	当整个页面及所有依赖资源如样式表和图片都已完成加载时，将触发load事件
+loadEventEnd	load事件处理程序被终止
+pageshow	当一条会话历史记录被执行的时候将会触发页面显示(pageshow)事件
+
+
+
+
