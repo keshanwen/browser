@@ -14,7 +14,8 @@
         FP: 0,
         FCP: 0,
         LCP: 0,
-        FID: 0
+        FID: 0,
+        CLS: 0
     };
     new PerformanceObserver(function (entryList) {
         var entries = entryList.getEntries() || [];
@@ -43,19 +44,17 @@
           const FID = entry.processingStart - entry.startTime;
            console.log('FID:', FID, entry);
        }
-   }).observe({ type: 'first-input', buffered: true });
+    }).observe({ type: 'first-input', buffered: true });
+
+    new PerformanceObserver((entryList) => {
+       var entries = entryList.getEntries() || [];
+       entries.forEach(function (entry) {
+           console.log('entry', entry);
+           if (!entry.hadRecentInput) {
+               data.CLS += entry.value;
+               console.log("CLS: " + data.CLS);
+           }
+       });
+   }).observe({ type: 'layout-shift', buffered: true });
 });
-
-
-function pr() {
-  new Performance((entryList) => {
-    for (const entery of entryList.getEntries()) {
-      const FID = entry.processingStart - entery.startTime
-
-    }
-  }).observe({
-    type: 'first-input',
-    buffered: true
-  })
-}
 
