@@ -13,7 +13,8 @@
         url: window.location.href,
         FP: 0,
         FCP: 0,
-        LCP: 0
+        LCP: 0,
+        FID: 0
     };
     new PerformanceObserver(function (entryList) {
         var entries = entryList.getEntries() || [];
@@ -35,7 +36,26 @@
                  console.log("记录LCP: " + (data.LCP = entry.startTime));
              }
          });
-     }).observe({ type: "largest-contentful-paint", buffered: true });
+    }).observe({ type: "largest-contentful-paint", buffered: true });
+
+    new PerformanceObserver((entryList) => {
+       for (const entry of entryList.getEntries()) {
+          const FID = entry.processingStart - entry.startTime;
+           console.log('FID:', FID, entry);
+       }
+   }).observe({ type: 'first-input', buffered: true });
 });
 
+
+function pr() {
+  new Performance((entryList) => {
+    for (const entery of entryList.getEntries()) {
+      const FID = entry.processingStart - entery.startTime
+
+    }
+  }).observe({
+    type: 'first-input',
+    buffered: true
+  })
+}
 
