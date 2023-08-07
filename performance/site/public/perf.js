@@ -12,7 +12,8 @@
     var data = {
         url: window.location.href,
         FP: 0,
-        FCP: 0
+        FCP: 0,
+        LCP: 0
     };
     new PerformanceObserver(function (entryList) {
         var entries = entryList.getEntries() || [];
@@ -26,6 +27,15 @@
             }
         });
     }).observe({ type: "paint", buffered: true });
+
+    new PerformanceObserver(function (entryList) {
+         var entries = entryList.getEntries() || [];
+         entries.forEach(function (entry) {
+             if (entry.startTime > data.LCP) {
+                 console.log("记录LCP: " + (data.LCP = entry.startTime));
+             }
+         });
+     }).observe({ type: "largest-contentful-paint", buffered: true });
 });
 
 
