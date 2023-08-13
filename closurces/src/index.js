@@ -16,16 +16,15 @@ let globalExecutionContext = new ExecutionContext(globalLexicalEnvironment, glob
 ECStack.push(globalExecutionContext);
 
 //创建a变量并初始化为undefined
-ECStack.current.lexicalEnvironment.createBinding('a');
-ECStack.current.lexicalEnvironment.setBinding('a', undefined);
+ECStack.current.variableEnvironment.createBinding('a');
+ECStack.current.variableEnvironment.setBinding('a', undefined);
 //创建fn变量并赋值为函数
 let oneFn = new FunctionInstance('one', 'var b = 2;\nconsole.log(a, b);',
     ECStack.current.lexicalEnvironment);
-ECStack.current.lexicalEnvironment.createBinding('one');
-ECStack.current.lexicalEnvironment.setBinding('one', oneFn);
-
+ECStack.current.variableEnvironment.createBinding('one');
+ECStack.current.variableEnvironment.setBinding('one', oneFn);
 //开始执行代码,给a变量赋值为1
-ECStack.current.lexicalEnvironment.setBinding('a', 1);
+ECStack.current.variableEnvironment.setBinding('a', 1);
 //遇到函数则创建一个新的词法环境
 let oneLexicalEnvironment = LexicalEnvironment.NewDeclarativeEnvironment(oneFn.scope);
 //创建one函数执行上下文
@@ -34,12 +33,37 @@ let oneExecutionContext = new ExecutionContext(oneLexicalEnvironment, global);
 ECStack.push(oneExecutionContext);
 
 //创建并绑定变量b,执行变量提升
-ECStack.current.lexicalEnvironment.createBinding('b');
-ECStack.current.lexicalEnvironment.setBinding('b', undefined);
+ECStack.current.variableEnvironment.createBinding('b');
+ECStack.current.variableEnvironment.setBinding('b', undefined);
 //开始执行函数代码，给变量b赋值为2
-ECStack.current.lexicalEnvironment.setBinding('b', 2);
-//按作用域链查找a和b变量的值并打印
-console.log(ECStack.current.lexicalEnvironment.getIdentifierReference('a')
-    , ECStack.current.lexicalEnvironment.getIdentifierReference('b'));
-//弹出one执行上下文，回到全局执行上下文，one执行上下文销毁
-ECStack.pop();
+ECStack.current.variableEnvironment.setBinding('b', 2);
+//备份当前的词法作用域
+let oldEnv = ECStack.current.lexicalEnvironment
+//创建新的词法环境
+let blockEnv = LexicalEnvironment.NewDeclarativeEnvironment(oldEnv);blockEnv.createBinding('c');
+blockEnv.setBinding('c', { type: 'let', uninitialized: true });
+//让blockEnv成为当前执行上下文的词法环境
+ECStack.current.lexicalEnvironment = blockEnv;
+//开始执行块级作用域中的代码
+ECStack.current.lexicalEnvironment.setBinding('c', 3);
+console.log(
+    ECStack.current.lexicalEnvironment.getIdentifierReference('a')
+    , ECStack.current.lexicalEnvironment.getIdentifierReference('b')
+    , ECStack.current.lexicalEnvironment.getIdentifierReference('c'));
+ECStack.current.lexicalEnvironment = oldEnv;
+//备份当前的词法作用域
+oldEnv = ECStack.current.lexicalEnvironment;
+//创建新的词法环境
+blockEnv = LexicalEnvironment.NewDeclarativeEnvironment(oldEnv);
+blockEnv.createBinding('c');
+blockEnv.setBinding('c', { type: 'let', uninitialized: true });
+//让blockEnv成为当前执行上下文的词法环境
+ECStack.current.lexicalEnvironment = blockEnv;
+//开始执行块级作用域中的代码
+ECStack.current.lexicalEnvironment.setBinding('c', 4);
+console.log(
+    ECStack.current.lexicalEnvironment.getIdentifierReference('a')
+    , ECStack.current.lexicalEnvironment.getIdentifierReference('b')
+    , ECStack.current.lexicalEnvironment.getIdentifierReference('c'));
+ECStack.current.lexicalEnvironment = oldEnv;
+ECStack.pop()

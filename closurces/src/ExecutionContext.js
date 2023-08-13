@@ -1,6 +1,6 @@
 class ExecutionContext {
     constructor(lexicalEnvironment, thisBinding) {
-        this.lexicalEnvironment = lexicalEnvironment;
+        this.variableEnvironment = this.lexicalEnvironment = lexicalEnvironment;
         this.thisBinding = thisBinding;
     }
 }

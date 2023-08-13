@@ -29,7 +29,11 @@ class EnvironmentRecord {
      * @param {*} N   名称
      */
     getBindingValue(N) {
-        return this.bindings[N];
+        let value = this.bindings[N]
+        if (value.type === 'let' && value.uninitialized) {
+            throw new Error(`ReferenceError: Cannot access '${N}' before initialization`);
+        }
+        return value
     }
 }
 module.exports = EnvironmentRecord;
