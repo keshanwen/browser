@@ -17,12 +17,15 @@ let delayTaskQueue = [];
 
 (function IOThread() {
     let browser = fork('./browser.js');
-   console.time('cost');
+
     browser.on('message', function ({ data }) {
         console.log(data);
-        setTimeout(() => {
-            console.timeEnd('cost');
-        }, 1000);
+       let xhr = new XMLHttpRequest();
+       xhr.open('GET', 'http://localhost:3000/data');
+       xhr.onload = function () {
+           console.log(xhr.response);
+      }
+      xhr.send();
     });
     browser.send({ type: 'click', data: 'clicked' });
 })();
@@ -46,4 +49,29 @@ function processDelayTask() {
     }
     return true
   })
+}
+
+class XMLHttpRequest {
+  constructor() {
+    this.options = {}
+  }
+
+  open(method, url) {
+    this.options.method = method
+    this.options.url = url
+  }
+
+  send() {
+    let child = fork('./XMLHttpRequest.js');
+    child.on('message', (message) => {
+      if (message.type === 'response') {
+        this.response = message.data
+        macroTaskQueue.put(this.onload)
+      }
+    })
+    child.send({
+      type: 'send',
+      options: this.options
+    })
+  }
 }
